@@ -1,40 +1,70 @@
 package com.example.himalaya.fragments;
 
+import android.graphics.Rect;
 import android.provider.SyncStateContract;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.himalaya.R;
 import com.example.himalaya.adapters.RecommendListAdapter;
 import com.example.himalaya.base.BaseFragment;
+import com.example.himalaya.interfaces.IRecommendViewCallback;
+import com.example.himalaya.presenters.RecommendPresenter;
 import com.example.himalaya.utils.Constants;
 import com.example.himalaya.utils.LogUtil;
+import com.example.himalaya.views.UILoader;
 import com.ximalaya.ting.android.opensdk.constants.DTransferConstants;
 import com.ximalaya.ting.android.opensdk.datatrasfer.CommonRequest;
 import com.ximalaya.ting.android.opensdk.datatrasfer.IDataCallBack;
 import com.ximalaya.ting.android.opensdk.model.album.Album;
 import com.ximalaya.ting.android.opensdk.model.album.GussLikeAlbumList;
 
+import net.lucode.hackware.magicindicator.buildins.UIUtil;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class RecommendFragment extends BaseFragment {
+public class RecommendFragment extends BaseFragment implements IRecommendViewCallback, UILoader.OnRetryClickListener {
 
     public static final String TAG="RecommendFragment";
     private View mRootView;
     private RecyclerView mRecommendRv;
     private RecommendListAdapter mRecommendListAdapter;
+    private RecommendPresenter mRecommendPresenter;
+    private UILoader mUiLoader;
 
     @Override
-    protected View onSubViewLoaded(LayoutInflater layoutInflater, ViewGroup container) {
-        //view加载完成
-        mRootView = layoutInflater.inflate(R.layout.fragment_recommend, container,false);
+    protected View onSubViewLoaded(final LayoutInflater layoutInflater, ViewGroup container) {
+        mUiLoader = new UILoader(getContext()){
+            @Override
+            protected View getSuccessView(ViewGroup container) {
+                return createSuccessView(layoutInflater,container);
+            }
+        };
 
+        //获取到逻辑层的对象
+        mRecommendPresenter = RecommendPresenter.getInstance();
+        //先要设置通知接口的注册
+        mRecommendPresenter.registerViewCallback(this);
+        //获取推荐列表
+        mRecommendPresenter.getRecommendList();
+        if(mUiLoader.getParent() instanceof ViewGroup){
+            ((ViewGroup) mUiLoader.getParent()).removeView(mUiLoader);
+        }
+
+        mUiLoader.setOnRetryClickListener(this);
+        return mUiLoader;
+    }
+
+    private View createSuccessView(LayoutInflater layoutInflater, ViewGroup container) {
+        //view加载完成
+        mRootView=layoutInflater.inflate(R.layout.fragment_recommend,container,false);
         //RecyclerView的使用
         //1、找到控件
         mRecommendRv = mRootView.findViewById(R.id.recommend_list);
@@ -42,43 +72,61 @@ public class RecommendFragment extends BaseFragment {
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
         linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
         mRecommendRv.setLayoutManager(linearLayoutManager);
+        mRecommendRv.addItemDecoration(new RecyclerView.ItemDecoration() {
+            @Override
+            public void getItemOffsets(@NonNull Rect outRect, @NonNull View view, @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
+                outRect.top= UIUtil.dip2px(view.getContext(),5);
+                outRect.bottom= UIUtil.dip2px(view.getContext(),5);
+                outRect.left= UIUtil.dip2px(view.getContext(),5);
+                outRect.right= UIUtil.dip2px(view.getContext(),5);
+            }
+        });
         //3、设置适配器
         mRecommendListAdapter = new RecommendListAdapter();
         mRecommendRv.setAdapter(mRecommendListAdapter);
-        //去拿数据回来
-        getRecommendData();
-
         return mRootView;
     }
 
-    private void getRecommendData() {
-        //封装参数
-        Map<String,String> map=new HashMap<>();
-        //这个参数表示一页数据返回
-        map.put(DTransferConstants.LIKE_COUNT, Constants.COUNT_RECOMMEND+"");
-        CommonRequest.getGuessLikeAlbum(map, new IDataCallBack<GussLikeAlbumList>() {
-            @Override
-            public void onSuccess(GussLikeAlbumList gussLikeAlbumList) {
-                LogUtil.d(TAG,"thread name -->"+Thread.currentThread().getName());
-                //数据获取成功
-                if(gussLikeAlbumList!=null){
-                    List<Album> albumList=gussLikeAlbumList.getAlbumList();
-                    //数据回来以后，去更新UI
-                    upRecommendUI(albumList);
-                }
-            }
-
-            @Override
-            public void onError(int i, String s) {
-                LogUtil.d(TAG,"error --> "+i);
-                LogUtil.d(TAG,"errorMsg --> "+s);
-            }
-        });
-
+    @Override
+    public void onRecommendListLoaded(List<Album> result) {
+        //当我们获取到推荐内容的时候，这个方法就会被调用（成功了）
+        //数据回来就是更新UI了
+        //把数据设置给适配器，并且更新UI
+        mRecommendListAdapter.setData(result);
+        mUiLoader.updateStatus(UILoader.UIStatus.SUCCESS);
     }
 
-    private void upRecommendUI(List<Album> albumList) {
-        //把数据设置给适配器，并更新UI
-        mRecommendListAdapter.setData(albumList);
+    @Override
+    public void onNetworkError() {
+        mUiLoader.updateStatus(UILoader.UIStatus.NETWORK_ERROR);
+    }
+
+    @Override
+    public void onEmpty() {
+        mUiLoader.updateStatus(UILoader.UIStatus.EMPTY);
+    }
+
+    @Override
+    public void onLoading() {
+        mUiLoader.updateStatus(UILoader.UIStatus.LOADING);
+    }
+
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        //取消接口的注册
+        if (mRecommendPresenter != null) {
+            mRecommendPresenter.unRegisterViewCallback(this);
+        }
+    }
+
+    @Override
+    public void onRetryClick() {
+        //表示网络不佳的时候，用户点击了重试
+        //重新获取数据即可
+        if (mRecommendPresenter != null) {
+            mRecommendPresenter.getRecommendList();
+        }
     }
 }
