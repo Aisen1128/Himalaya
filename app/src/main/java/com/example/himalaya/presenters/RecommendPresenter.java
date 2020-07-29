@@ -138,5 +138,6 @@ public class RecommendPresenter implements IRecommendPresenter {
         if(mCallbacks != null) {
             mCallbacks.remove(callback);
         }
+
     }
 }
