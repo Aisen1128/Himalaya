@@ -75,6 +75,7 @@ public class MainActivity extends FragmentActivity {
         magicIndicator.setNavigator(commonNavigator);
         ViewPagerHelper.bind(magicIndicator,mContentPager);
 
+        //test
     }
 
 }
