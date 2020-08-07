@@ -11,7 +11,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -23,6 +22,7 @@ import com.example.himalaya.adapters.DetailListAdapter;
 import com.example.himalaya.base.BaseActivity;
 import com.example.himalaya.interfaces.IAlbumDetailViewCallback;
 import com.example.himalaya.presenters.AlbumDetailPresenter;
+import com.example.himalaya.presenters.PlayerPresenter;
 import com.example.himalaya.utils.ImageBlur;
 import com.example.himalaya.views.RoundRectImageView;
 import com.example.himalaya.views.UILoader;
@@ -190,8 +190,11 @@ public class DetailActivity extends BaseActivity implements IAlbumDetailViewCall
     }
 
     @Override
-    public void onItemClick() {
-        //TODO:跳转到播放器界面
+    public void onItemClick(List<Track> detailData, int position) {
+        //设置播放器的数据
+        PlayerPresenter playerPresenter = PlayerPresenter.getPlayerPresenter();
+        playerPresenter.setPlayList(detailData,position);
+        //跳转到播放器界面
         Intent intent=new Intent(this,PlayerActivity.class);
         startActivity(intent);
     }

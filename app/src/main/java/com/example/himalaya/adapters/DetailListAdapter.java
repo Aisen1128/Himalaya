@@ -4,7 +4,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -15,7 +14,6 @@ import com.ximalaya.ting.android.opensdk.model.track.Track;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.SimpleFormatter;
 
 public class DetailListAdapter extends RecyclerView.Adapter<DetailListAdapter.InnerHolder> {
     private SimpleDateFormat mUpdateDateFormat=new SimpleDateFormat("yyyy-MM-dd");
@@ -63,7 +61,7 @@ public class DetailListAdapter extends RecyclerView.Adapter<DetailListAdapter.In
             public void onClick(View v) {
                 //Toast.makeText(v.getContext(),"you click"+position,Toast.LENGTH_SHORT).show();
                 if (mItemClickListener != null) {
-                    mItemClickListener.onItemClick();
+                    mItemClickListener.onItemClick(mDetailData,position);
                 }
             }
         });
@@ -91,6 +89,6 @@ public class DetailListAdapter extends RecyclerView.Adapter<DetailListAdapter.In
     }
 
     public interface ItemClickListener{
-        void onItemClick();
+        void onItemClick(List<Track> detailData, int position);
     }
 }
