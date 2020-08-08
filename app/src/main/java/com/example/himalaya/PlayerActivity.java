@@ -132,7 +132,7 @@ public class PlayerActivity extends BaseActivity implements IPlayerCallback, Vie
                 int action = motionEvent.getAction();
                 switch (action) {
                     case MotionEvent.ACTION_DOWN:
-                        mIsUserSlidePager = true;
+                        //mIsUserSlidePager = true;
                         break;
                 }
                 return false;
@@ -307,7 +307,7 @@ public class PlayerActivity extends BaseActivity implements IPlayerCallback, Vie
     public void onPageSelected(int position) {
 
         //当页面选中的时候，就去切换播放的内容
-        if (mPlayerPresenter != null && mIsUserSlidePager) {
+        if (mPlayerPresenter != null ) {
             mPlayerPresenter.playByIndex(position);
         }
         mIsUserSlidePager=false;
